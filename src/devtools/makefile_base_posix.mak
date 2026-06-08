@@ -88,7 +88,7 @@ ifeq ($(OS),Linux)
 			# The steam-runtime is incompatible with clang at this point, so disable it
 			# if clang is enabled.
 			ifneq ($(CXX),clang++)
-				VALVE_BINDIR = /valve/steam-runtime/bin/
+				VALVE_BINDIR = /usr/bin/
 			endif
 		endif
 		GCC_VER =
