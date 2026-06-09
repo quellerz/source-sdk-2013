@@ -173,6 +173,10 @@ bool CBaseHLCombatWeapon::WeaponShouldBeLowered( void )
 	if ( m_bLowered )
 		return true;
 	
+    CHL2_Player* pPlayer = dynamic_cast<CHL2_Player*>( GetOwner() );
+    if ( pPlayer && pPlayer->IsSprinting() && ( fabs( pPlayer->GetAbsVelocity().x ) > 0.0f || fabs( pPlayer->GetAbsVelocity().y ) > 0.0f ) )
+        return true;
+
 #if !defined( CLIENT_DLL )
 
 	if ( GlobalEntity_GetState( "friendly_encounter" ) == GLOBAL_ON )

@@ -604,6 +604,9 @@ void CWeaponCrossbow::ItemBusyFrame( void )
 //-----------------------------------------------------------------------------
 void CWeaponCrossbow::ItemPostFrame( void )
 {
+    if ( GetActivity() == ACT_VM_HOLSTER )
+        return;
+
 	// Allow zoom toggling
 	CheckZoomToggle();
 

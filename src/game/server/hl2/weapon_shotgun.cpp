@@ -560,6 +560,8 @@ void CWeaponShotgun::ItemPostFrame( void )
 		return;
 	}
 
+    ProcessAnimationEvents();
+
 	if (m_bInReload)
 	{
 		// If I'm primary firing and have one round stop reloading and fire

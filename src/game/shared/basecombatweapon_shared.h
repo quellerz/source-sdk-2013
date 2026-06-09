@@ -209,8 +209,8 @@ public:
 	virtual void			SendViewModelAnim( int nSequence );
 	float					GetViewModelSequenceDuration();	// Return how long the current view model sequence is.
 	bool					IsViewModelSequenceFinished( void ); // Returns if the viewmodel's current animation is finished
-
-	virtual void			SetViewModel();
+	
+    virtual void			SetViewModel();
 
 	virtual bool			HasWeaponIdleTimeElapsed( void );
 	virtual void			SetWeaponIdleTime( float time );
@@ -249,6 +249,9 @@ public:
 																	// either reloads, switches weapons, or plays an empty sound.
 
 	virtual bool			ShouldBlockPrimaryFire() { return false; }
+
+      virtual void            ProcessAnimationEvents( void );
+      bool                    m_bWeaponIsLowered;
 
 #ifdef CLIENT_DLL
 	virtual void			CreateMove( float flInputSampleTime, CUserCmd *pCmd, const QAngle &vecOldViewAngles ) {}

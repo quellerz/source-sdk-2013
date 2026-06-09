@@ -38,6 +38,8 @@
 
 #endif
 
+#include "hl2_player_shared.h"
+
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
@@ -1646,12 +1648,49 @@ void CBaseCombatWeapon::ItemPreFrame( void )
 //====================================================================================
 // WEAPON BEHAVIOUR
 //====================================================================================
+void CBaseCombatWeapon::ProcessAnimationEvents(void)
+{
+	CBasePlayer *pOwner = ToBasePlayer( GetOwner() );
+	if (!pOwner)
+		return;
+
+    CHL2_Player* pPlayer = assert_cast<CHL2_Player*>(pOwner);
+    if (!pPlayer)
+        return;
+
+	if ( !m_bWeaponIsLowered && pPlayer->IsSprinting() && ( fabs( pPlayer->GetAbsVelocity().x ) > 0.0f || fabs( pPlayer->GetAbsVelocity().y ) > 0.0f ) )
+	{
+		m_bWeaponIsLowered = true;
+		SendWeaponAnim( ACT_VM_IDLE_LOWERED );
+		m_flNextPrimaryAttack = gpGlobals->curtime + GetViewModelSequenceDuration();
+	        m_flNextSecondaryAttack = m_flNextPrimaryAttack;
+	}
+	else if ( m_bWeaponIsLowered && ( !pPlayer->IsSprinting() || !fabs( pPlayer->GetAbsVelocity().x ) || !fabs(pPlayer->GetAbsVelocity().y ) ) )
+	{
+		m_bWeaponIsLowered = false;
+		SendWeaponAnim( ACT_VM_IDLE );
+		m_flNextPrimaryAttack = gpGlobals->curtime + GetViewModelSequenceDuration();
+ 	        m_flNextSecondaryAttack = m_flNextPrimaryAttack;
+	}
+
+	if ( m_bWeaponIsLowered )
+	{
+		if ( gpGlobals->curtime > m_flNextPrimaryAttack )
+		{
+			SendWeaponAnim( ACT_VM_IDLE_LOWERED );
+			m_flNextPrimaryAttack = gpGlobals->curtime + GetViewModelSequenceDuration();
+			m_flNextSecondaryAttack = m_flNextPrimaryAttack;
+		}
+	}
+}
+
 void CBaseCombatWeapon::ItemPostFrame( void )
 {
 	CBasePlayer *pOwner = ToBasePlayer( GetOwner() );
 	if (!pOwner)
 		return;
 
+    ProcessAnimationEvents();
 	UpdateAutoFire();
 
 	//Track the duration of the fire
