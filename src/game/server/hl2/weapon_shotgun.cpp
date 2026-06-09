@@ -3,7 +3,6 @@
 // Purpose: A shotgun.
 //
 //			Primary attack: single barrel shot.
-//			Secondary attack: double barrel shot.
 //
 //=============================================================================//
 
@@ -36,7 +35,6 @@ public:
 private:
 	bool	m_bNeedPump;		// When emptied completely
 	bool	m_bDelayedFire1;	// Fire primary when finished reloading
-	bool	m_bDelayedFire2;	// Fire secondary when finished reloading
 
 public:
 	void	Precache( void );
@@ -76,11 +74,9 @@ public:
 	void ItemHolsterFrame( void );
 	void ItemPostFrame( void );
 	void PrimaryAttack( void );
-	void SecondaryAttack( void );
 	void DryFire( void );
 
 	void FireNPCPrimaryAttack( CBaseCombatCharacter *pOperator, bool bUseWeaponAngles );
-	void Operator_ForceNPCFire( CBaseCombatCharacter  *pOperator, bool bSecondary );
 	void Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCharacter *pOperator );
 
 	DECLARE_ACTTABLE();
@@ -98,7 +94,6 @@ BEGIN_DATADESC( CWeaponShotgun )
 
 	DEFINE_FIELD( m_bNeedPump, FIELD_BOOLEAN ),
 	DEFINE_FIELD( m_bDelayedFire1, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bDelayedFire2, FIELD_BOOLEAN ),
 
 END_DATADESC()
 
@@ -184,17 +179,6 @@ void CWeaponShotgun::FireNPCPrimaryAttack( CBaseCombatCharacter *pOperator, bool
 	}
 
 	pOperator->FireBullets( 8, vecShootOrigin, vecShootDir, GetBulletSpread(), MAX_TRACE_LENGTH, m_iPrimaryAmmoType, 0 );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CWeaponShotgun::Operator_ForceNPCFire( CBaseCombatCharacter *pOperator, bool bSecondary )
-{
-	// Ensure we have enough rounds in the clip
-	m_iClip1++;
-
-	FireNPCPrimaryAttack( pOperator, true );
 }
 
 //-----------------------------------------------------------------------------
@@ -493,63 +477,6 @@ void CWeaponShotgun::PrimaryAttack( void )
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
-//
-//
-//-----------------------------------------------------------------------------
-void CWeaponShotgun::SecondaryAttack( void )
-{
-	// Only the player fires this way so we can cast
-	CBasePlayer *pPlayer = ToBasePlayer( GetOwner() );
-
-	if (!pPlayer)
-	{
-		return;
-	}
-
-	pPlayer->m_nButtons &= ~IN_ATTACK2;
-	// MUST call sound before removing a round from the clip of a CMachineGun
-	WeaponSound(WPN_DOUBLE);
-
-	pPlayer->DoMuzzleFlash();
-
-	SendWeaponAnim( ACT_VM_SECONDARYATTACK );
-
-	// player "shoot" animation
-	pPlayer->SetAnimation( PLAYER_ATTACK1 );
-
-	// Don't fire again until fire animation has completed
-	m_flNextPrimaryAttack = gpGlobals->curtime + SequenceDuration();
-	m_iClip1 -= 2;	// Shotgun uses same clip for primary and secondary attacks
-
-	Vector vecSrc	 = pPlayer->Weapon_ShootPosition();
-	Vector vecAiming = pPlayer->GetAutoaimVector( AUTOAIM_SCALE_DEFAULT );	
-
-	// Fire the bullets
-	pPlayer->FireBullets( 12, vecSrc, vecAiming, GetBulletSpread(), MAX_TRACE_LENGTH, m_iPrimaryAmmoType, 0, -1, -1, 0, NULL, false, false );
-	pPlayer->ViewPunch( QAngle(random->RandomFloat( -5, 5 ),0,0) );
-
-	pPlayer->SetMuzzleFlashTime( gpGlobals->curtime + 1.0 );
-
-	CSoundEnt::InsertSound( SOUND_COMBAT, GetAbsOrigin(), SOUNDENT_VOLUME_SHOTGUN, 0.2 );
-
-	if (!m_iClip1 && pPlayer->GetAmmoCount(m_iPrimaryAmmoType) <= 0)
-	{
-		// HEV suit - indicate out of ammo condition
-		pPlayer->SetSuitUpdate("!HEV_AMO0", FALSE, 0); 
-	}
-
-	if( m_iClip1 )
-	{
-		// pump so long as some rounds are left.
-		m_bNeedPump = true;
-	}
-
-	m_iSecondaryAttacks++;
-	gamestats->Event_WeaponFired( pPlayer, false, GetClassname() );
-}
-	
-//-----------------------------------------------------------------------------
 // Purpose: Override so shotgun can do mulitple reloads in a row
 //-----------------------------------------------------------------------------
 void CWeaponShotgun::ItemPostFrame( void )
@@ -570,13 +497,6 @@ void CWeaponShotgun::ItemPostFrame( void )
 			m_bInReload		= false;
 			m_bNeedPump		= false;
 			m_bDelayedFire1 = true;
-		}
-		// If I'm secondary firing and have one round stop reloading and fire
-		else if ((pOwner->m_nButtons & IN_ATTACK2 ) && (m_iClip1 >=2))
-		{
-			m_bInReload		= false;
-			m_bNeedPump		= false;
-			m_bDelayedFire2 = true;
 		}
 		else if (m_flNextPrimaryAttack <= gpGlobals->curtime)
 		{
@@ -612,45 +532,6 @@ void CWeaponShotgun::ItemPostFrame( void )
 		return;
 	}
 	
-	// Shotgun uses same timing and ammo for secondary attack
-	if ((m_bDelayedFire2 || pOwner->m_nButtons & IN_ATTACK2)&&(m_flNextPrimaryAttack <= gpGlobals->curtime))
-	{
-		m_bDelayedFire2 = false;
-		
-		if ( (m_iClip1 <= 1 && UsesClipsForAmmo1()))
-		{
-			// If only one shell is left, do a single shot instead	
-			if ( m_iClip1 == 1 )
-			{
-				PrimaryAttack();
-			}
-			else if (!pOwner->GetAmmoCount(m_iPrimaryAmmoType))
-			{
-				DryFire();
-			}
-			else
-			{
-				StartReload();
-			}
-		}
-
-		// Fire underwater?
-		else if (GetOwner()->GetWaterLevel() == 3 && m_bFiresUnderwater == false)
-		{
-			WeaponSound(EMPTY);
-			m_flNextPrimaryAttack = gpGlobals->curtime + 0.2;
-			return;
-		}
-		else
-		{
-			// If the firing button was just pressed, reset the firing time
-			if ( pOwner->m_afButtonPressed & IN_ATTACK )
-			{
-				 m_flNextPrimaryAttack = gpGlobals->curtime;
-			}
-			SecondaryAttack();
-		}
-	}
 	else if ( (m_bDelayedFire1 || pOwner->m_nButtons & IN_ATTACK) && m_flNextPrimaryAttack <= gpGlobals->curtime)
 	{
 		m_bDelayedFire1 = false;
@@ -733,7 +614,6 @@ CWeaponShotgun::CWeaponShotgun( void )
 
 	m_bNeedPump		= false;
 	m_bDelayedFire1 = false;
-	m_bDelayedFire2 = false;
 
 	m_fMinRange1		= 0.0;
 	m_fMaxRange1		= 500;
