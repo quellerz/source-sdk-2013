@@ -3309,20 +3309,20 @@ void C_BaseAnimating::ProcessMuzzleFlashEvent()
 		//FIXME: We should really use a named attachment for this
 		if ( m_Attachments.Count() > 0 )
 		{
-			Vector vAttachment;
-			QAngle dummyAngles;
-			GetAttachment( 1, vAttachment, dummyAngles );
+            Vector vAttachment, vAng; // Get muzzle flash origin
+			QAngle angles; // Get muzzle flash angles
+			GetAttachment(1, vAttachment, angles);
+			AngleVectors(angles, &vAng);
+			vAttachment += vAng * 2;
 
-			// Make an elight
-			dlight_t *el = effects->CL_AllocElight( LIGHT_INDEX_MUZZLEFLASH + index );
-			el->origin = vAttachment;
-			el->radius = random->RandomInt( 32, 64 ); 
-			el->decay = el->radius / 0.05f;
-			el->die = gpGlobals->curtime + 0.05f;
-			el->color.r = 255;
-			el->color.g = 192;
-			el->color.b = 64;
-			el->color.exponent = 5;
+			dlight_t* dl = effects->CL_AllocDlight(index);
+			dl->origin = vAtta0chment;
+			dl->color.r = 255;
+			dl->color.g = 192;
+			dl->color.b = 64;
+			dl->die = gpGlobals->curtime + 0.05f; // Stop after this time
+			dl->radius = random->RandomFloat(245.0f, 256.0f);
+			dl->decay = 512.0f; // By how much decrease muzzle flash after 1 sec
 		}
 	}
 }
