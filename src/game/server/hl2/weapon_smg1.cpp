@@ -323,6 +323,7 @@ void CWeaponSMG1::AddViewKick( void )
 //-----------------------------------------------------------------------------
 void CWeaponSMG1::SecondaryAttack( void )
 {
+    return; // Temporary disables secondary fire feature
 	// Only the player fires this way so we can cast
 	CBasePlayer *pPlayer = ToBasePlayer( GetOwner() );
 	
