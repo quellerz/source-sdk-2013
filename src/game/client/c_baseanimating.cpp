@@ -3316,7 +3316,7 @@ void C_BaseAnimating::ProcessMuzzleFlashEvent()
 			vAttachment += vAng * 2;
 
 			dlight_t* dl = effects->CL_AllocDlight(index);
-			dl->origin = vAtta0chment;
+			dl->origin = vAttachment;
 			dl->color.r = 255;
 			dl->color.g = 192;
 			dl->color.b = 64;
