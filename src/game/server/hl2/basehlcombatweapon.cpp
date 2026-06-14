@@ -80,18 +80,22 @@ void CHLMachineGun::PrimaryAttack( void )
 	{
 		if ( iBulletsToFire > m_iClip1 )
 			iBulletsToFire = m_iClip1;
-		m_iClip1 -= iBulletsToFire;
+		m_iClip1 -= 1;
 	}
 
 	m_iPrimaryAttacks++;
 	gamestats->Event_WeaponFired( pPlayer, true, GetClassname() );
+    
+    Vector vecSpread = pPlayer->GetAttackSpread( this );
+    float randFloat = vecSpread.x; // x = y = z
+    Vector customRandomSpread = RandomVector( -randFloat, randFloat );
 
 	// Fire the bullets
 	FireBulletsInfo_t info;
-	info.m_iShots = iBulletsToFire;
+	info.m_iShots = 1;
 	info.m_vecSrc = pPlayer->Weapon_ShootPosition( );
 	info.m_vecDirShooting = pPlayer->GetAutoaimVector( AUTOAIM_SCALE_DEFAULT );
-	info.m_vecSpread = pPlayer->GetAttackSpread( this );
+	info.m_vecSpread = customRandomSpread;
 	info.m_flDistance = MAX_TRACE_LENGTH;
 	info.m_iAmmoType = m_iPrimaryAmmoType;
 	info.m_iTracerFreq = 2;
