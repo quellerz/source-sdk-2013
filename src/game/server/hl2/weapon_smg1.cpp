@@ -140,7 +140,7 @@ CWeaponSMG1::CWeaponSMG1( )
 {
 	m_fMinRange1		= 0;// No minimum range. 
 	m_fMaxRange1		= 1400;
-    m_iFireMode         = FIREMODE_3RNDBURST;
+    // m_iFireMode         = FIREMODE_3RNDBURST;
 
 	m_bAltFiresUnderwater = false;
 }
@@ -324,68 +324,7 @@ void CWeaponSMG1::AddViewKick( void )
 //-----------------------------------------------------------------------------
 void CWeaponSMG1::SecondaryAttack( void )
 {
-    return; // Temporary disables secondary fire feature
-	// Only the player fires this way so we can cast
-	CBasePlayer *pPlayer = ToBasePlayer( GetOwner() );
-	
-	if ( pPlayer == NULL )
-		return;
-
-	//Must have ammo
-	if ( ( pPlayer->GetAmmoCount( m_iSecondaryAmmoType ) <= 0 ) || ( pPlayer->GetWaterLevel() == 3 ) )
-	{
-		SendWeaponAnim( ACT_VM_DRYFIRE );
-		BaseClass::WeaponSound( EMPTY );
-		m_flNextSecondaryAttack = gpGlobals->curtime + 0.5f;
-		return;
-	}
-
-	if( m_bInReload )
-		m_bInReload = false;
-
-	// MUST call sound before removing a round from the clip of a CMachineGun
-	BaseClass::WeaponSound( WPN_DOUBLE );
-
-	pPlayer->RumbleEffect( RUMBLE_357, 0, RUMBLE_FLAGS_NONE );
-
-	Vector vecSrc = pPlayer->Weapon_ShootPosition();
-	Vector	vecThrow;
-	// Don't autoaim on grenade tosses
-	AngleVectors( pPlayer->EyeAngles() + pPlayer->GetPunchAngle(), &vecThrow );
-	VectorScale( vecThrow, 1000.0f, vecThrow );
-	
-	//Create the grenade
-	QAngle angles;
-	VectorAngles( vecThrow, angles );
-	CGrenadeAR2 *pGrenade = (CGrenadeAR2*)Create( "grenade_ar2", vecSrc, angles, pPlayer );
-	pGrenade->SetAbsVelocity( vecThrow );
-
-	pGrenade->SetLocalAngularVelocity( RandomAngle( -400, 400 ) );
-	pGrenade->SetMoveType( MOVETYPE_FLYGRAVITY, MOVECOLLIDE_FLY_BOUNCE ); 
-	pGrenade->SetThrower( GetOwner() );
-	pGrenade->SetDamage( sk_plr_dmg_smg1_grenade.GetFloat() );
-
-	SendWeaponAnim( ACT_VM_SECONDARYATTACK );
-
-	CSoundEnt::InsertSound( SOUND_COMBAT, GetAbsOrigin(), 1000, 0.2, GetOwner(), SOUNDENT_CHANNEL_WEAPON );
-
-	// player "shoot" animation
-	pPlayer->SetAnimation( PLAYER_ATTACK1 );
-
-	// Decrease ammo
-	pPlayer->RemoveAmmo( 1, m_iSecondaryAmmoType );
-
-	// Can shoot again immediately
-	m_flNextPrimaryAttack = gpGlobals->curtime + 0.5f;
-
-	// Can blow up after a short delay (so have time to release mouse button)
-	m_flNextSecondaryAttack = gpGlobals->curtime + 1.0f;
-
-	// Register a muzzleflash for the AI.
-	pPlayer->SetMuzzleFlashTime( gpGlobals->curtime + 0.5 );	
-
-	m_iSecondaryAttacks++;
-	gamestats->Event_WeaponFired( pPlayer, false, GetClassname() );
+    BaseClass::SecondaryAttack();
 }
 
 #define	COMBINE_MIN_GRENADE_CLEAR_DIST 256
