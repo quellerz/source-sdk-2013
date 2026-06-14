@@ -43,16 +43,22 @@ public:
 	virtual void Equip( CBaseCombatCharacter *pOwner );
 	bool	Reload( void );
 
-	float	GetFireRate( void ) { return 0.05f; }	// 8,87 hz
+	float	GetFireRate( void );
 	int		CapabilitiesGet( void ) { return bits_CAP_WEAPON_RANGE_ATTACK1; }
 	int		WeaponRangeAttack2Condition( float flDot, float flDist );
 	Activity	GetPrimaryAttackActivity( void );
 
-	virtual const Vector& GetBulletSpread( void )
-	{
-		static const Vector cone = VECTOR_CONE_5DEGREES;
-		return cone;
-	}
+    virtual const Vector& GetBulletSpread( void )
+    {
+        if ( m_iFireMode == FIREMODE_3RNDBURST )
+        {
+            static const Vector coneBurst = VECTOR_CONE_2DEGREES;  // 2 degrees for burst (more accurate)
+            return coneBurst;
+        }
+        
+        static const Vector coneAuto = VECTOR_CONE_5DEGREES;  // 5 degrees for full auto
+        return coneAuto;
+    }
 
 	const WeaponProficiencyInfo_t *GetProficiencyValues();
 
@@ -189,6 +195,24 @@ void CWeaponSMG1::FireNPCPrimaryAttack( CBaseCombatCharacter *pOperator, Vector 
 }
 
 //-----------------------------------------------------------------------------
+//
+// Purpose: Get fire rate based on fire mode
+//
+// Quell:   I thought it will be useful feature,
+//          but I haven't change any values because
+//          firerate was already good for burst fire.
+//          
+//          Maybe it can be used in future, idk
+//          
+//-----------------------------------------------------------------------------
+float CWeaponSMG1::GetFireRate( void )
+{
+    if ( m_iFireMode == FIREMODE_3RNDBURST )
+        return 0.05f;  // burts mode fire rate
+    return 0.05f;  // Full-auto fire rate
+}
+
+//-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 void CWeaponSMG1::Operator_ForceNPCFire( CBaseCombatCharacter *pOperator, bool bSecondary )
@@ -228,33 +252,6 @@ void CWeaponSMG1::Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatChar
 			FireNPCPrimaryAttack( pOperator, vecShootOrigin, vecShootDir );
 		}
 		break;
-
-		/*//FIXME: Re-enable
-		case EVENT_WEAPON_AR2_GRENADE:
-		{
-		CAI_BaseNPC *npc = pOperator->MyNPCPointer();
-
-		Vector vecShootOrigin, vecShootDir;
-		vecShootOrigin = pOperator->Weapon_ShootPosition();
-		vecShootDir = npc->GetShootEnemyDir( vecShootOrigin );
-
-		Vector vecThrow = m_vecTossVelocity;
-
-		CGrenadeAR2 *pGrenade = (CGrenadeAR2*)Create( "grenade_ar2", vecShootOrigin, vec3_angle, npc );
-		pGrenade->SetAbsVelocity( vecThrow );
-		pGrenade->SetLocalAngularVelocity( QAngle( 0, 400, 0 ) );
-		pGrenade->SetMoveType( MOVETYPE_FLYGRAVITY ); 
-		pGrenade->m_hOwner			= npc;
-		pGrenade->m_pMyWeaponAR2	= this;
-		pGrenade->SetDamage(sk_npc_dmg_ar2_grenade.GetFloat());
-
-		// FIXME: arrgg ,this is hard coded into the weapon???
-		m_flNextGrenadeCheck = gpGlobals->curtime + 6;// wait six seconds before even looking again to see if a grenade can be thrown.
-
-		m_iClip2--;
-		}
-		break;
-		*/
 
 	default:
 		BaseClass::Operator_HandleAnimEvent( pEvent, pOperator );
@@ -306,17 +303,26 @@ bool CWeaponSMG1::Reload( void )
 //-----------------------------------------------------------------------------
 void CWeaponSMG1::AddViewKick( void )
 {
-	#define	EASY_DAMPEN			2.0f
-	#define	MAX_VERTICAL_KICK	4.0f	//Degrees
-	#define	SLIDE_LIMIT			1.0f	//Seconds
-	
-	//Get the view kick
-	CBasePlayer *pPlayer = ToBasePlayer( GetOwner() );
+    #define EASY_DAMPEN            2.0f
+    #define MAX_VERTICAL_KICK      4.0f    //Degrees
+    #define SLIDE_LIMIT            1.0f    //Seconds
+    
+    CBasePlayer *pPlayer = ToBasePlayer( GetOwner() );
 
-	if ( pPlayer == NULL )
-		return;
+    if ( pPlayer == NULL )
+        return;
 
-	DoMachineGunKick( pPlayer, EASY_DAMPEN, MAX_VERTICAL_KICK, m_fFireDuration, SLIDE_LIMIT );
+    float flMaxKick = MAX_VERTICAL_KICK;
+    float flDampen = EASY_DAMPEN;
+    
+    // Adjust recoil based on fire mode
+    if ( m_iFireMode == FIREMODE_3RNDBURST )
+    {
+        flMaxKick = MAX_VERTICAL_KICK * 0.05f;
+        flDampen = EASY_DAMPEN * 2.0f;
+    }
+    
+    DoMachineGunKick( pPlayer, flDampen, flMaxKick, m_fFireDuration, SLIDE_LIMIT );
 }
 
 //-----------------------------------------------------------------------------
@@ -324,6 +330,11 @@ void CWeaponSMG1::AddViewKick( void )
 //-----------------------------------------------------------------------------
 void CWeaponSMG1::SecondaryAttack( void )
 {
+    CBasePlayer *pPlayer = ToBasePlayer( GetOwner() );
+    
+    if ( pPlayer == NULL )
+        return;
+
     BaseClass::SecondaryAttack();
 }
 
