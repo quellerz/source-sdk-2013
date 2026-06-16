@@ -606,7 +606,6 @@ void CHL2_Player::ThrowGrenade(void)
 		if ((timedeploy < gpGlobals->curtime) && (timedeploy != NULL))
 		{
 			//Successfully Thrown A Grenade! Decrement ammo
-			RemoveAmmo(1, 12);
 			WantThrow = false;
 		}
 	}
@@ -634,6 +633,8 @@ void CHL2_Player::CreateGrenade(void)
 	GetVelocity(&vecThrow, NULL);
 	vecThrow += vForward * 1200;
 	Fraggrenade_Create(vecSrc, vec3_angle, vecThrow, AngularImpulse(600, random->RandomInt(-1200, 1200), 0), this, 3.0f, false);
+	
+    RemoveAmmo(1, 12);
 
 	gamestats->Event_WeaponFired(this, true, GetClassname());
 }

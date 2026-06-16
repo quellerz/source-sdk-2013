@@ -719,4 +719,28 @@
 		"wide"					"f60"	[$X360]
 		"tall"					"100"
 	}
+    HudGrenades
+	{
+		"fieldName" "HudFragCount"
+		"visible" "1"
+		"PaintBackgroundType"	"2"
+		"xpos"	"r270"		[$WIN32]
+		"ypos"	"444"		[$WIN32]
+		"xpos_hidef"	"306"		[$X360]		// aligned to left
+		"xpos_lodef"	"c-18"		[$X360]		// centered in screen
+		"ypos"	"428"		[$X360]				
+		"tall"  "24"
+		"wide"	"36"
+		"font"	"WeaponIconsSmall"
+		
+		"icon_xpos"	"8"
+		"icon_ypos" "-8"
+		
+		"BarInsetX" "5"
+		"BarInsetY" "18"
+		"BarWidth" "25"
+		"BarHeight" "2"
+		"BarChunkWidth" "5"
+		"BarChunkGap" "1"
+	}
 }
