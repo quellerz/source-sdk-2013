@@ -181,6 +181,12 @@ ConVar	sk_max_gauss_round		( "sk_max_gauss_round", "0", FCVAR_REPLICATED );
 ConVar	sk_npc_dmg_gunship			( "sk_npc_dmg_gunship", "0", FCVAR_REPLICATED );
 ConVar	sk_npc_dmg_gunship_to_plr	( "sk_npc_dmg_gunship_to_plr", "0", FCVAR_REPLICATED );
 
+// MP5
+ConVar	sk_plr_dmg_mp5			( "sk_plr_dmg_mp5","0", FCVAR_REPLICATED );
+ConVar	sk_npc_dmg_mp5			( "sk_npc_dmg_mp5","0", FCVAR_REPLICATED);
+ConVar	sk_max_mp5				( "sk_max_mp5","0", FCVAR_REPLICATED);
+
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : iDmgType - 

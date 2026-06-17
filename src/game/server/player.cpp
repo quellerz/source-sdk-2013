@@ -6152,6 +6152,7 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 		GiveAmmo( 5,	"Hopwire" );
 #endif		
 		GiveNamedItem( "weapon_smg1" );
+        GiveNamedItem( "weapon_mp5" );
 		GiveNamedItem( "weapon_frag" );
 		// GiveNamedItem( "weapon_crowbar" );
 		GiveNamedItem( "weapon_pistol" );
