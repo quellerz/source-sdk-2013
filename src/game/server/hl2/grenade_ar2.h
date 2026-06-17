@@ -29,7 +29,9 @@ public:
 	CHandle< SmokeTrail > m_hSmokeTrail;
 	float				 m_fSpawnTime;
 	float				m_fDangerRadius;
-
+    
+    Vector      m_vecVelocity;
+    bool        m_bTouched;
 
 	void		Spawn( void );
 	void		Precache( void );
