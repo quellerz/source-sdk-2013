@@ -60,6 +60,10 @@ ConVar cl_viewbob_enabled	( "cl_viewbob_enabled", "1", 0, "Oscillation Toggle" )
 ConVar cl_viewbob_timer		( "cl_viewbob_timer", "10", 0, "Speed of Oscillation" ); // How often do "turns up and down" happen
 ConVar cl_viewbob_scale		( "cl_viewbob_scale", "0.03", 0, "Magnitude of Oscillation" ); // How far does the camera go up or down when walking
 
+ConVar cl_viewtilt_enabled( "cl_viewtilt_enabled", "1", 0, "Side movement camera tilt" );
+ConVar cl_viewtilt_scale( "cl_viewtilt_scale", "0.1", 0, "Tilt strength" );
+ConVar cl_viewtilt_sprint_multiplier( "cl_viewtilt_sprint_multiplier", "2", 0, "Tilt strength multiplier for sprinting");
+
 #ifdef STAGING_ONLY
 #ifdef CLIENT_DLL
 ConVar debug_latch_reset_onduck( "debug_latch_reset_onduck", "1", FCVAR_CHEAT );
@@ -1920,13 +1924,24 @@ void CGameMovement::WalkMove( void )
 	fmove = mv->m_flForwardMove;
 	smove = mv->m_flSideMove;
 
-    if (cl_viewbob_enabled.GetInt() == 1 && !engine->IsPaused())
+    if ( cl_viewbob_enabled.GetInt() == 1 && !engine->IsPaused() && player->m_nButtons & IN_SPEED )
 	{
 		float xoffset = sin(gpGlobals->curtime * cl_viewbob_timer.GetFloat()) * player->GetAbsVelocity().Length() * cl_viewbob_scale.GetFloat() / 200 - 0.01;
 		float yoffset = sin(2 * gpGlobals->curtime * cl_viewbob_timer.GetFloat()) * player->GetAbsVelocity().Length() * cl_viewbob_scale.GetFloat() / 500;
 		player->ViewPunch(QAngle(0, yoffset, xoffset));
 	}
-
+    
+    if ( cl_viewtilt_enabled.GetInt() && !engine->IsPaused() )
+    {
+        float speed = max( fabs(mv->m_flForwardMove) + fabs(mv->m_flSideMove), 1.0f );
+        float side = mv->m_flSideMove / speed;
+       
+        float tilt = side * cl_viewtilt_scale.GetFloat();
+        if( player->m_nButtons & IN_SPEED )
+            tilt *= cl_viewtilt_sprint_multiplier.GetFloat(); // Sprinting multiplier
+        
+        player->ViewPunch( QAngle(0, 0, tilt) );
+    }
 	// Zero out z components of movement vectors
 	if ( g_bMovementOptimizations )
 	{
