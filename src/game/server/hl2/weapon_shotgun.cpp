@@ -48,8 +48,8 @@ public:
 	virtual const Vector& GetBulletSpread( void )
 	{
 		static Vector vitalAllyCone = VECTOR_CONE_3DEGREES;
-        static Vector autoCone = VECTOR_CONE_10DEGREES;    // Auto mode spread
-        static Vector pumpCone = VECTOR_CONE_3DEGREES;    // Pump mode spread (tighter)
+        static Vector autoCone = VECTOR_CONE_15DEGREES;    // Auto mode spread
+        static Vector pumpCone = VECTOR_CONE_7DEGREES;    // Pump mode spread (tighter)
 
 		if( GetOwner() && (GetOwner()->Classify() == CLASS_PLAYER_ALLY_VITAL) )
 		{
@@ -474,9 +474,9 @@ void CWeaponShotgun::PrimaryAttack( void )
 		m_bNeedChamber = false;
 	}
 	if (m_Autoloading)
-		ShotgunFire(9, 6, false); //Here we can set (number of pellets, damage per pellet, pump)
+		ShotgunFire(9, 4, false); //Here we can set (number of pellets, damage per pellet, pump)
 	else
-		ShotgunFire(9, 8, true); //The same as above
+		ShotgunFire(9, 5, true); //The same as above
 }
 
 //-----------------------------------------------------------------------------
