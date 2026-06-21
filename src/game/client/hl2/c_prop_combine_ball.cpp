@@ -17,6 +17,9 @@
 #include "view_scene.h"
 #include "beamdraw.h"
 
+#include "dlight.h"
+#include "iefx.h"
+
 // Precache our effects
 CLIENTEFFECT_REGISTER_BEGIN( PrecacheEffectCombineBall )
 CLIENTEFFECT_MATERIAL( "effects/ar2_altfire1" )
@@ -232,7 +235,15 @@ int C_PropCombineBall::DrawModel( int flags )
 {
 	if ( !m_bEmit )
 		return 0;
-	
+
+    dlight_t *dl = effects->CL_AllocDlight( entindex() );
+    dl->origin = GetAbsOrigin();
+    dl->color.r = 255;
+    dl->color.g = 192;
+    dl->color.b = 64;
+    dl->radius = 220.0f + sin( gpGlobals->curtime * 15.0f ) * 40.0f;
+    dl->die = gpGlobals->curtime + 0.1f;
+
 	// Make sure our materials are cached
 	if ( !InitMaterials() )
 	{
@@ -332,6 +343,15 @@ DECLARE_CLIENT_EFFECT( "cball_bounce", CombineBallImpactCallback );
 void CombineBallExplosionCallback( const CEffectData &data )
 {
 	Vector normal(0,0,1);
+
+    dlight_t *dl = effects->CL_AllocDlight( LIGHT_INDEX_TE_DYNAMIC + 1 );
+    dl->origin = data.m_vOrigin;
+    dl->color.r = 255;
+    dl->color.g = 220;
+    dl->color.b = 255;
+    dl->radius = 512.0f;
+    dl->decay = 2048.0f;
+    dl->die = gpGlobals->curtime + 1.5f;
 
 	// Throw sparks
 	FX_ElectricSpark( data.m_vOrigin, 4, 1, &normal );
