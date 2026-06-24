@@ -20,6 +20,7 @@
 #define CBTEXTURENAMEMAX	13			// only load first n chars of name
 
 #define GAMEMOVEMENT_DUCK_TIME				1000.0f		// ms
+#define GAMEMOVEMENT_SLIDE_TIME				600.0f		// ms
 #define GAMEMOVEMENT_JUMP_TIME				510.0f		// ms approx - based on the 21 unit height jump
 #define GAMEMOVEMENT_JUMP_HEIGHT			21.0f		// units
 #define GAMEMOVEMENT_TIME_TO_UNDUCK			( TIME_TO_UNDUCK * 1000.0f )		// ms
@@ -72,10 +73,13 @@ protected:
 	float			m_flWaterEntryTime;
 	int				m_nOnLadder;
 
+    bool            m_bSliding;
+
 	Vector			m_vecForward;
 	Vector			m_vecRight;
 	Vector			m_vecUp;
 
+    Vector          m_vecGroundNormal;
 
 	// Does most of the player movement logic.
 	// Returns with origin, angles, and velocity modified in place.

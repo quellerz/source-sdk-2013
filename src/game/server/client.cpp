@@ -317,6 +317,8 @@ void ClientPrecache( void )
 	CBaseEntity::PrecacheScriptSound( "Player.FallDamage" );
 	CBaseEntity::PrecacheScriptSound( "Player.Swim" );
 
+    CBaseEntity::PrecacheScriptSound( "Player.Slide" );
+
 	// General HUD sounds
 	CBaseEntity::PrecacheScriptSound( "Player.PickupWeapon" );
 	CBaseEntity::PrecacheScriptSound( "Player.DenyWeaponSelection" );

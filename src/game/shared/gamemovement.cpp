@@ -55,13 +55,18 @@ ConVar player_limit_jump_speed( "player_limit_jump_speed", "1", FCVAR_REPLICATED
 // duck controls. Its value is meaningless anytime we don't have the options window open.
 ConVar option_duck_method("option_duck_method", "1", FCVAR_REPLICATED|FCVAR_ARCHIVE );// 0 = HOLD to duck, 1 = Duck is a toggle
 
-// Camera Bob
-ConVar cl_viewbob_enabled	( "cl_viewbob_enabled", "1", 0, "Oscillation Toggle" ); // Enable or disable camera bobbing
-ConVar cl_viewbob_timer		( "cl_viewbob_timer", "10", 0, "Speed of Oscillation" ); // How often do "turns up and down" happen
-ConVar cl_viewbob_scale		( "cl_viewbob_scale", "0.03", 0, "Magnitude of Oscillation" ); // How far does the camera go up or down when walking
+ConVar sv_slide_min_speed           ( "sv_slide_min_speed", "250", FCVAR_REPLICATED, "Minimun speed required for sliding" );
+ConVar sv_slide_end_speed           ( "sv_slide_end_speed", "80", FCVAR_REPLICATED, "Speed when sliding stops" );
+ConVar sv_slide_boost               ( "sv_slide_boost", "150", FCVAR_REPLICATED, "Speed boost when player starts sliding" );
+ConVar sv_slide_friction            ( "sv_slide_friction", "0.7", FCVAR_REPLICATED, "Friction multiplier when sliding" );
 
-ConVar cl_viewtilt_enabled( "cl_viewtilt_enabled", "1", 0, "Side movement camera tilt" );
-ConVar cl_viewtilt_scale( "cl_viewtilt_scale", "0.1", 0, "Tilt strength" );
+// Camera Bob
+ConVar cl_viewbob_enabled	        ( "cl_viewbob_enabled", "1", 0, "Oscillation Toggle" ); // Enable or disable camera bobbing
+ConVar cl_viewbob_timer		        ( "cl_viewbob_timer", "10", 0, "Speed of Oscillation" ); // How often do "turns up and down" happen
+ConVar cl_viewbob_scale		        ( "cl_viewbob_scale", "0.03", 0, "Magnitude of Oscillation" ); // How far does the camera go up or down when walking
+
+ConVar cl_viewtilt_enabled          ( "cl_viewtilt_enabled", "1", 0, "Side movement camera tilt" );
+ConVar cl_viewtilt_scale            ( "cl_viewtilt_scale", "0.1", 0, "Tilt strength" );
 ConVar cl_viewtilt_sprint_multiplier( "cl_viewtilt_sprint_multiplier", "2", 0, "Tilt strength multiplier for sprinting");
 
 #ifdef STAGING_ONLY
@@ -630,6 +635,8 @@ CGameMovement::CGameMovement( void )
 	m_nOldWaterLevel	= WL_NotInWater;
 	m_flWaterEntryTime	= 0;
 	m_nOnLadder			= 0;
+    
+    m_bSliding          = false;
 
 	mv					= NULL;
 
@@ -1643,6 +1650,16 @@ void CGameMovement::Friction( void )
 	if (player->GetGroundEntity() != NULL)  // On an entity that is the ground
 	{
 		friction = sv_friction.GetFloat() * player->m_surfaceFriction;
+        if ( m_bSliding ) // I hate this thing here. It suppose to emitate stronger gravitainal affection when sliding on a steeper slope by decreasing friction. I hate it, it looks like shit and work like shit. FIXME: It does it's job well to make player's slide longer on steeper slope, but it also speeds the player up when he moves upwards... 
+        {
+            float dot = DotProduct( mv->m_vecVelocity, m_vecGroundNormal );
+            if ( dot >= 0.0f )
+            {
+                float slope = 1.0f - fabs( DotProduct( mv->m_vecVelocity, m_vecGroundNormal ) ) / ( mv->m_vecVelocity.Length() + 1.0f );
+                friction *= sv_slide_friction.GetFloat() * ( 0.5f * slope );
+        
+            }
+        }
 
 		// Bleed off some speed, but if we have less than the bleed
 		//  threshold, bleed the threshold amount.
@@ -1675,6 +1692,9 @@ void CGameMovement::Friction( void )
 	newspeed = speed - drop;
 	if (newspeed < 0)
 		newspeed = 0;
+    
+    if ( m_bSliding && newspeed < sv_slide_end_speed.GetFloat() )
+        m_bSliding = false;
 
 	if ( newspeed != speed )
 	{
@@ -1923,6 +1943,12 @@ void CGameMovement::WalkMove( void )
 	// Copy movement amounts
 	fmove = mv->m_flForwardMove;
 	smove = mv->m_flSideMove;
+    
+    if ( m_bSliding )
+    {
+        fmove = 0;
+        smove = 0;
+    }
 
     if ( cl_viewbob_enabled.GetInt() == 1 && !engine->IsPaused() && player->m_nButtons & IN_SPEED )
 	{
@@ -3642,6 +3668,8 @@ void CGameMovement::SetGroundEntity( trace_t *pm )
 
 	if ( newGround )
 	{
+        m_vecGroundNormal = pm->plane.normal;
+
 		CategorizeGroundSurface( *pm );
 
 		// Then we are not in water jump sequence
@@ -3655,6 +3683,10 @@ void CGameMovement::SetGroundEntity( trace_t *pm )
 
 		mv->m_vecVelocity.z = 0.0f;
 	}
+    else
+    {
+        m_vecGroundNormal = vec3_origin;
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -4383,6 +4415,9 @@ void CGameMovement::Duck( void )
 	if ( IsDead() )
 		return;
 
+    if ( !( mv->m_nButtons & IN_DUCK ) )
+        m_bSliding = false;
+
 	// Slow down ducked players.
 	HandleDuckingSpeedCrop();
 
@@ -4406,10 +4441,31 @@ void CGameMovement::Duck( void )
 #endif
 			// Have the duck button pressed, but the player currently isn't in the duck position.
 			if ( ( buttonsPressed & IN_DUCK ) && !bInDuck && !bDuckJump && !bDuckJumpTime )
-			{
-				player->m_Local.m_flDucktime = GAMEMOVEMENT_DUCK_TIME;
-				player->m_Local.m_bDucking = true;
-			}
+            {
+                float speed2D = mv->m_vecVelocity.Length2D();
+
+                if ( player->GetGroundEntity() && speed2D > sv_slide_min_speed.GetFloat() )
+                {   
+                    m_bSliding = true;
+                    
+                    player->m_Local.m_flDucktime = GAMEMOVEMENT_SLIDE_TIME;
+                    player->m_Local.m_bDucking = true;
+
+	                MoveHelper()->StartSound( mv->GetAbsOrigin(), "Player.Slide" );
+                    
+                    Vector forward;
+                    AngleVectors( mv->m_vecViewAngles, &forward );
+                    forward.z = 0;
+                    VectorNormalize( forward );
+
+                    mv->m_vecVelocity += forward * sv_slide_boost.GetFloat();
+                }
+                else
+                {
+                    player->m_Local.m_flDucktime = GAMEMOVEMENT_DUCK_TIME;
+                    player->m_Local.m_bDucking = true;
+                }
+            }
 			
 			// The player is in duck transition and not duck-jumping.
 			if ( player->m_Local.m_bDucking && !bDuckJump && !bDuckJumpTime )
@@ -4421,6 +4477,8 @@ void CGameMovement::Duck( void )
 				if ( ( flDuckSeconds > TIME_TO_DUCK ) || bInDuck || bInAir )
 				{
 					FinishDuck();
+                    if ( m_bSliding )
+                        player->AddFlag( FL_DUCKING );
 				}
 				else
 				{
@@ -4631,8 +4689,9 @@ void CGameMovement::PlayerMove( void )
 	}
 
 	m_nOnLadder = 0;
-
-	player->UpdateStepSound( player->m_pSurfaceData, mv->GetAbsOrigin(), mv->m_vecVelocity );
+    
+    if ( !m_bSliding )
+	    player->UpdateStepSound( player->m_pSurfaceData, mv->GetAbsOrigin(), mv->m_vecVelocity );
 
 	UpdateDuckJumpEyeOffset();
 	Duck();
