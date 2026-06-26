@@ -24,8 +24,6 @@ extern ConVar sv_airaccelerate;
 extern ConVar sv_wateraccelerate;
 extern ConVar sv_waterfriction;
 extern ConVar sv_footsteps;
-extern ConVar sv_rollspeed;
-extern ConVar sv_rollangle;
 extern ConVar sv_friction;
 extern ConVar sv_bounce;
 extern ConVar sv_maxvelocity;

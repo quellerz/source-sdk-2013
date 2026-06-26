@@ -1614,8 +1614,6 @@ void CBasePlayer::CalcPlayerView( Vector& eyeOrigin, QAngle& eyeAngles, float& f
 	// Snack off the origin before bob + water offset are applied
 	Vector vecBaseEyePosition = eyeOrigin;
 
-	CalcViewRoll( eyeAngles );
-
 	// Apply punch angle
 	VectorAdd( eyeAngles, m_Local.m_vecPunchAngle, eyeAngles );
 
@@ -1669,8 +1667,6 @@ void CBasePlayer::CalcVehicleView(
 
 	// Snack off the origin before bob + water offset are applied
 	Vector vecBaseEyePosition = eyeOrigin;
-
-	CalcViewRoll( eyeAngles );
 
 	// Apply punch angle
 	VectorAdd( eyeAngles, m_Local.m_vecPunchAngle, eyeAngles );
@@ -1754,19 +1750,6 @@ float CBasePlayer::CalcRoll (const QAngle& angles, const Vector& velocity, float
 	// Scale by right/left sign
     return side*sign;
 }
-
-//-----------------------------------------------------------------------------
-// Purpose: Determine view roll, including data kick
-//-----------------------------------------------------------------------------
-void CBasePlayer::CalcViewRoll( QAngle& eyeAngles )
-{
-	if ( GetMoveType() == MOVETYPE_NOCLIP )
-		return;
-
-	float side = CalcRoll( GetAbsAngles(), GetAbsVelocity(), sv_rollangle.GetFloat(), sv_rollspeed.GetFloat() );
-	eyeAngles[ROLL] += side;
-}
-
 
 void CBasePlayer::DoMuzzleFlash()
 {

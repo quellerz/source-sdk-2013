@@ -1068,16 +1068,6 @@ void CGameMovement::CheckParameters( void )
 		v_angle = mv->m_vecAngles;
 		v_angle = v_angle + player->m_Local.m_vecPunchAngle;
 
-		// Now adjust roll angle
-		if ( player->GetMoveType() != MOVETYPE_ISOMETRIC  &&
-			 player->GetMoveType() != MOVETYPE_NOCLIP )
-		{
-			mv->m_vecAngles[ROLL]  = CalcRoll( v_angle, mv->m_vecVelocity, sv_rollangle.GetFloat(), sv_rollspeed.GetFloat() );
-		}
-		else
-		{
-			mv->m_vecAngles[ROLL] = 0.0; // v_angle[ ROLL ];
-		}
 		mv->m_vecAngles[PITCH] = v_angle[PITCH];
 		mv->m_vecAngles[YAW]   = v_angle[YAW];
 	}
