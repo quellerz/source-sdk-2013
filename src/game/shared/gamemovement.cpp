@@ -4404,6 +4404,24 @@ void CGameMovement::Duck( void )
 	// Slow down ducked players.
 	HandleDuckingSpeedCrop();
 
+    if ( !bInAir && ( mv->m_nButtons & IN_DUCK ) && !m_bSliding )
+	{
+		float flSpeed = sqrt( mv->m_vecVelocity[0] * mv->m_vecVelocity[0] + mv->m_vecVelocity[1] * mv->m_vecVelocity[1] );
+		if ( flSpeed >= sv_slide_min_speed.GetFloat() )
+		{
+			// 1. Force your engine's sliding flag to true directly
+			m_bSliding = true;
+
+			// 2. Safely trigger your slide sound event right here without copying code
+#ifndef CLIENT_DLL
+			player->EmitSound( "Player.Slide" ); // Change "Player.Slide" to whatever sound name you are using
+#endif
+
+			// 3. Flag old buttons so the slide engine registers the duck state natively
+			mv->m_nOldButtons |= IN_DUCK;
+		}
+	}
+
 	// If the player is holding down the duck button, the player is in duck transition, ducking, or duck-jumping.
 	if ( ( mv->m_nButtons & IN_DUCK ) || player->m_Local.m_bDucking  || bInDuck || bDuckJump )
 	{
