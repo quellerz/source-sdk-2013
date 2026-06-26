@@ -37,6 +37,11 @@ extern ConVar sv_specaccelerate;
 extern ConVar sv_specspeed;
 extern ConVar sv_specnoclip;
 
+extern ConVar sv_slide_min_speed;
+extern ConVar sv_slide_end_speed;
+extern ConVar sv_slide_boost;
+extern ConVar sv_slide_friction;
+
 // Vehicle convars
 extern ConVar r_VehicleViewDampen;
 

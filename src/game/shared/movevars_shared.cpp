@@ -82,6 +82,12 @@ ConVar	sv_rollspeed	( "sv_rollspeed", "200", FCVAR_NOTIFY | FCVAR_REPLICATED | F
 ConVar	sv_rollangle	( "sv_rollangle", "0", FCVAR_NOTIFY | FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY, "Max view roll angle");
 #endif // CSTRIKE_DLL
 
+// sliding convars
+ConVar sv_slide_min_speed           ( "sv_slide_min_speed", "250", FCVAR_REPLICATED, "Minimun speed required for sliding" );
+ConVar sv_slide_end_speed           ( "sv_slide_end_speed", "80", FCVAR_REPLICATED, "Speed when sliding stops" );
+ConVar sv_slide_boost               ( "sv_slide_boost", "150", FCVAR_REPLICATED, "Speed boost when player starts sliding" );
+ConVar sv_slide_friction            ( "sv_slide_friction", "0.7", FCVAR_REPLICATED, "Friction multiplier when sliding" );
+
 #if defined( DOD_DLL ) || defined( CSTRIKE_DLL ) || defined( HL1MP_DLL )
 ConVar	sv_friction		( "sv_friction","4", FCVAR_NOTIFY | FCVAR_REPLICATED, "World friction." );
 #else

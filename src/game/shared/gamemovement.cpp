@@ -55,11 +55,6 @@ ConVar player_limit_jump_speed( "player_limit_jump_speed", "1", FCVAR_REPLICATED
 // duck controls. Its value is meaningless anytime we don't have the options window open.
 ConVar option_duck_method("option_duck_method", "1", FCVAR_REPLICATED|FCVAR_ARCHIVE );// 0 = HOLD to duck, 1 = Duck is a toggle
 
-ConVar sv_slide_min_speed           ( "sv_slide_min_speed", "250", FCVAR_REPLICATED, "Minimun speed required for sliding" );
-ConVar sv_slide_end_speed           ( "sv_slide_end_speed", "80", FCVAR_REPLICATED, "Speed when sliding stops" );
-ConVar sv_slide_boost               ( "sv_slide_boost", "150", FCVAR_REPLICATED, "Speed boost when player starts sliding" );
-ConVar sv_slide_friction            ( "sv_slide_friction", "0.7", FCVAR_REPLICATED, "Friction multiplier when sliding" );
-
 // Camera Bob
 ConVar cl_viewbob_enabled	        ( "cl_viewbob_enabled", "1", 0, "Oscillation Toggle" ); // Enable or disable camera bobbing
 ConVar cl_viewbob_timer		        ( "cl_viewbob_timer", "10", 0, "Speed of Oscillation" ); // How often do "turns up and down" happen
