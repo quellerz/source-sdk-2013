@@ -2815,8 +2815,11 @@ bool CHL2_Player::BumpWeapon( CBaseCombatWeapon *pWeapon )
 		{
 			CBaseCombatWeapon *pActiveWeapon = Weapon_GetSlot( WEAPON_PRIMARY_SLOT );
 
-            /* This code is commended out because it causes player to pickup weapon from ANY slot when one of his weapon is out of ammo*/
-			/*if ( pActiveWeapon != NULL && pActiveWeapon->HasAnyAmmo() == false && Weapon_CanSwitchTo( pWeapon ) )*/
+            /* Quell: This code is commended out because it causes player to pickup weapon from ANY slot when one of his weapon is out of ammo.*/
+            /*                                                                                                                                 */
+            /* Quell: This problem had a pretty simple fix, but I will leave it commented, because I don't like this feature at all. Maybe in future */
+            /*        I will add a convar and VGUI setting to turn it on and off, but not now because I am fucking lazy.*/
+            /*if ( pActiveWeapon != NULL && pActiveWeapon->GetSlot() == pWeapon->GetSlot() && pActiveWeapon->HasAnyAmmo() == false && Weapon_CanSwitchTo( pWeapon ) )*/
 			/*{*/
 				/*Weapon_Equip( pWeapon );*/
 				/*return true;*/
