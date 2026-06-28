@@ -115,6 +115,10 @@ ConVar	sk_plr_dmg_pistol		( "sk_plr_dmg_pistol","0", FCVAR_REPLICATED );
 ConVar	sk_npc_dmg_pistol		( "sk_npc_dmg_pistol","0", FCVAR_REPLICATED);
 ConVar	sk_max_pistol			( "sk_max_pistol","0", FCVAR_REPLICATED);
 
+ConVar	sk_plr_dmg_glock17		( "sk_plr_dmg_glock17","0", FCVAR_REPLICATED );
+ConVar	sk_npc_dmg_glock17		( "sk_npc_dmg_glock17","0", FCVAR_REPLICATED);
+ConVar	sk_max_glock17			( "sk_max_glock17","0", FCVAR_REPLICATED);
+
 ConVar	sk_plr_dmg_smg1			( "sk_plr_dmg_smg1","0", FCVAR_REPLICATED );
 ConVar	sk_npc_dmg_smg1			( "sk_npc_dmg_smg1","0", FCVAR_REPLICATED);
 ConVar	sk_max_smg1				( "sk_max_smg1","0", FCVAR_REPLICATED);
