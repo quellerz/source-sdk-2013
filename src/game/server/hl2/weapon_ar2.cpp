@@ -466,32 +466,32 @@ void CWeaponAR2::Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatChara
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose: Recoil.
+//
+// Quell: This suppose to look like something similar to VK-47 Flatline from
+//        Titanfall/Apex games. 
 //-----------------------------------------------------------------------------
 void CWeaponAR2::AddViewKick( void )
 {
-	#define	EASY_DAMPEN			0.5f
-	#define	MAX_VERTICAL_KICK	8.0f	//Degrees
-	#define	SLIDE_LIMIT			5.0f	//Seconds
-	
-	//Get the view kick
 	CBasePlayer *pPlayer = ToBasePlayer( GetOwner() );
 
-	if (!pPlayer)
-		return;
+	static int iShot = 0;
+	static float flLastTime = 0;
+	
+	if ( gpGlobals->curtime - flLastTime > 0.3f )
+        iShot = 0;
 
-	float flDuration = m_fFireDuration;
+	iShot++;
+	flLastTime = gpGlobals->curtime;
 
-	if( g_pGameRules->GetAutoAimMode() == AUTOAIM_ON_CONSOLE )
-	{
-		// On the 360 (or in any configuration using the 360 aiming scheme), don't let the
-		// AR2 progressive into the late, highly inaccurate stages of its kick. Just
-		// spoof the time to make it look (to the kicking code) like we haven't been
-		// firing for very long.
-		flDuration = MIN( flDuration, 0.75f );
-	}
+	// Vertical
+	float flV = clamp( ( iShot <= 3 ? -0.1f : iShot <= 8 ? -0.3f : iShot <= 15 ? -0.6f : -1.0f ) + random->RandomFloat( -0.1f, 0.1f ), -3.5f, 0.5f );
+	
+	// Horizontal
+	float flH = clamp( ( ( iShot % 2 == 0 ) ? 1.0f : -1.0f ) * min( 0.3f + ( iShot * 0.05f ), 4.0f ) + random->RandomFloat( -0.4f, 0.4f ), -5.0f, 5.0f );
 
-	DoMachineGunKick( pPlayer, EASY_DAMPEN, MAX_VERTICAL_KICK, flDuration, SLIDE_LIMIT );
+	pPlayer->ViewPunch( QAngle( flV, flH, 0 ) );
+	pPlayer->RumbleEffect( RUMBLE_AR2, 0, RUMBLE_FLAG_RESTART );
 }
 
 //-----------------------------------------------------------------------------
