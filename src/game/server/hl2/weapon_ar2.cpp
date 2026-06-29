@@ -475,6 +475,9 @@ void CWeaponAR2::AddViewKick( void )
 {
 	CBasePlayer *pPlayer = ToBasePlayer( GetOwner() );
 
+    if (!pPlayer)
+        return;
+
 	static int iShot = 0;
 	static float flLastTime = 0;
 	
