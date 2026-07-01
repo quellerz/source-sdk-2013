@@ -49,6 +49,8 @@ public:
 	void	ItemPreFrame( void );
 	void	ItemBusyFrame( void );
 	void	PrimaryAttack( void );
+    void    SecondaryAttack( void );
+    void    LeftGunAttack( void );
 	void	AddViewKick( void );
 	void	DryFire( void );
 	void	Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCharacter *pOperator );
@@ -60,7 +62,7 @@ public:
 
 	virtual bool Reload( void );
 
-	virtual const Vector& GetBulletSpread( void )
+    virtual const Vector& GetBulletSpread( void )
 	{		
 		// Handle NPCs first
 		static Vector npcCone = VECTOR_CONE_5DEGREES;
@@ -69,20 +71,24 @@ public:
 			
 		static Vector cone;
 
+		// If in rapid mode, the gun is inherently much wider in spread
+		if ( m_bDualMode )
+		{
+			float ramp = RemapValClamped( m_flAccuracyPenalty, 0.0f, PISTOL_ACCURACY_MAXIMUM_PENALTY_TIME, 0.0f, 1.0f ); 
+
+			VectorLerp( VECTOR_CONE_8DEGREES, VECTOR_CONE_6DEGREES, ramp, cone );
+			return cone;
+		}
+
 		if ( pistol_use_new_accuracy.GetBool() )
 		{
-			float ramp = RemapValClamped(	m_flAccuracyPenalty, 
-											0.0f, 
-											PISTOL_ACCURACY_MAXIMUM_PENALTY_TIME, 
-											0.0f, 
-											1.0f ); 
+			float ramp = RemapValClamped( m_flAccuracyPenalty, 0.0f, PISTOL_ACCURACY_MAXIMUM_PENALTY_TIME, 0.0f, 1.0f ); 
 
-			// We lerp from very accurate to inaccurate over time
-			VectorLerp( VECTOR_CONE_1DEGREES, VECTOR_CONE_6DEGREES, ramp, cone );
+			// Standard Mode lerp
+			VectorLerp( VECTOR_CONE_1DEGREES, VECTOR_CONE_4DEGREES, ramp, cone );
 		}
 		else
 		{
-			// Old value
 			cone = VECTOR_CONE_4DEGREES;
 		}
 
@@ -99,9 +105,12 @@ public:
 		return 3; 
 	}
 
-	virtual float GetFireRate( void ) 
+    virtual float GetFireRate( void ) 
 	{
-		return 0.5f; 
+		// Doubled fire rate when in rapid mode (0.25s vs 0.50s delay between shots for NPCs)
+		if ( m_bDualMode )
+			return 0.30f;
+		return 0.60f; 
 	}
 
 	DECLARE_ACTTABLE();
@@ -111,6 +120,9 @@ private:
 	float	m_flLastAttackTime;
 	float	m_flAccuracyPenalty;
 	int		m_nNumShotsFired;
+
+    bool    m_bDualMode;
+    bool    m_bFlip;
 };
 
 
@@ -164,6 +176,9 @@ CWeaponPistol::CWeaponPistol( void )
 	m_fMaxRange2		= 200;
 
 	m_bFiresUnderwater	= true;
+
+    m_bDualMode         = false;
+    m_bFlip             = false;
 }
 
 //-----------------------------------------------------------------------------
@@ -248,13 +263,121 @@ void CWeaponPistol::PrimaryAttack( void )
 		pOwner->ViewPunchReset();
 	}
 
-	BaseClass::PrimaryAttack();
+    if (!m_bDualMode)
+    {
+        BaseClass::PrimaryAttack();
+    }
+    else
+    {
+        if (!m_bFlip)
+        {
+            BaseClass::PrimaryAttack();
+            m_bFlip = true;
+        }
+        else
+        {
+            LeftGunAttack();
+            m_bFlip = false;
+        }
+    }
 
 	// Add an accuracy penalty which can move past our maximum penalty time if we're really spastic
 	m_flAccuracyPenalty += PISTOL_ACCURACY_SHOT_PENALTY_TIME;
 
 	m_iPrimaryAttacks++;
 	gamestats->Event_WeaponFired( pOwner, true, GetClassname() );
+}
+
+void CWeaponPistol::SecondaryAttack()
+{
+    m_bDualMode = !m_bDualMode;
+
+    WeaponSound( SPECIAL1 );
+
+    SendWeaponAnim( ACT_VM_IDLE );
+
+    m_flNextSecondaryAttack = gpGlobals->curtime + 0.3f;
+}
+
+void CWeaponPistol::LeftGunAttack()
+{
+	// If my clip is empty (and I use clips) start reload
+	if ( UsesClipsForAmmo1() && !m_iClip1 )
+	{
+		Reload();
+		return;
+	}
+
+	// Only the player fires this way so we can cast
+	CBasePlayer *pPlayer = ToBasePlayer( GetOwner() );
+
+	if (!pPlayer)
+	{
+		return;
+	}
+
+	// MUST call sound before removing a round from the clip of a CMachineGun
+	WeaponSound(SINGLE);
+
+	pPlayer->DoMuzzleFlash();
+
+	SendWeaponAnim( GetSecondaryAttackActivity() );
+
+	// player "shoot" animation
+	pPlayer->SetAnimation( PLAYER_ATTACK1 );
+
+	FireBulletsInfo_t info;
+	info.m_vecSrc	 = pPlayer->Weapon_ShootPosition( );
+
+	info.m_vecDirShooting = pPlayer->GetAutoaimVector( AUTOAIM_SCALE_DEFAULT );
+
+	// To make the firing framerate independent, we may have to fire more than one bullet here on low-framerate systems,
+	// especially if the weapon we're firing has a really fast rate of fire.
+	info.m_iShots = 0;
+	float fireRate = GetFireRate();
+
+	while ( m_flNextPrimaryAttack <= gpGlobals->curtime )
+	{
+		m_flNextPrimaryAttack = m_flNextPrimaryAttack + fireRate;
+		info.m_iShots++;
+		if ( !fireRate )
+			break;
+	}
+
+	// Make sure we don't fire more than the amount in the clip
+	if ( UsesClipsForAmmo1() )
+	{
+		info.m_iShots = min( info.m_iShots, m_iClip1 );
+		m_iClip1 -= info.m_iShots;
+	}
+	else
+	{
+		info.m_iShots = min( info.m_iShots, pPlayer->GetAmmoCount( m_iPrimaryAmmoType ) );
+		pPlayer->RemoveAmmo( info.m_iShots, m_iPrimaryAmmoType );
+	}
+
+	info.m_flDistance = MAX_TRACE_LENGTH;
+	info.m_iAmmoType = m_iPrimaryAmmoType;
+	info.m_iTracerFreq = 2;
+
+#if !defined( CLIENT_DLL )
+	// Fire the bullets
+	info.m_vecSpread = pPlayer->GetAttackSpread( this );
+#else
+	//!!!HACKHACK - what does the client want this function for?
+	info.m_vecSpread = GetActiveWeapon()->GetBulletSpread();
+#endif // CLIENT_DLL
+
+	pPlayer->FireBullets( info );
+
+	if (!m_iClip1 && pPlayer->GetAmmoCount(m_iPrimaryAmmoType) <= 0)
+	{
+		// HEV suit - indicate out of ammo condition
+		pPlayer->SetSuitUpdate("!HEV_AMO0", FALSE, 0);
+	}
+
+	//Add our view kick in
+	AddViewKick();
 }
 
 //-----------------------------------------------------------------------------
@@ -309,6 +432,15 @@ void CWeaponPistol::ItemPostFrame( void )
 
 	if ( pOwner == NULL )
 		return;
+    
+    if ( pOwner->m_nButtons & IN_ATTACK2 )
+    {
+        if ( m_flNextSecondaryAttack <= gpGlobals->curtime )
+        {
+            SecondaryAttack();
+            return;
+        }
+    }
 
 	//Allow a refire as fast as the player can click
 	if ( ( ( pOwner->m_nButtons & IN_ATTACK ) == false ) && ( m_flSoonestPrimaryAttack < gpGlobals->curtime ) )
