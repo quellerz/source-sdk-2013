@@ -119,15 +119,6 @@ public:
 		return 0.40f; 
 	}
 
-	// Dynamic clip size handling based on weapon script definitions
-	virtual int GetMaxClip1( void )
-	{
-		if ( m_iFireMode == FIREMODE_RAPID )
-			return BaseClass::GetMaxClip1() * 2; // Double clip size
-
-		return BaseClass::GetMaxClip1();
-	}
-
 	DECLARE_ACTTABLE();
 
 private:
