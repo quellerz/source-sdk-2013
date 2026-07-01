@@ -7,10 +7,7 @@
 // Quell:   FIXME #1: There is a bug when player has 0 ammo in right pistol's clip
 //                    it can't shoot more than one bullet from left pistol.
 //
-//          FIXME #2: There is a bug that player reloads only left pistol
-//                    when in secondary fire mode and if right pistol has ammo
-//
-//          FIXME #3: There is a bug that player can't reload at all in
+//          FIXME #2: There is a bug that player can't reload at all in
 //                    secondary fire mode when right pistol's clip is empty.
 //
 // $NoKeywords: $
@@ -351,7 +348,7 @@ void CWeaponPistol::SecondaryAttack()
 void CWeaponPistol::LeftGunAttack()
 {
 	// If my clip is empty (and I use clips) start reload
-	if ( UsesClipsForAmmo1() && !m_iClip1 )
+	if ( UsesClipsForAmmo1() && !m_iLeftClip )
 	{
 		return;
 	}
@@ -495,23 +492,6 @@ void CWeaponPistol::ItemPostFrame( void )
 	{
 		m_flNextPrimaryAttack = gpGlobals->curtime - 0.1f;
 	}
-    else if ( ( pOwner->m_nButtons & IN_ATTACK ) && ( m_flNextPrimaryAttack < gpGlobals->curtime ) )
-    {
-        if ( m_bDualMode )
-        {
-            if ( m_iClip1 <= 0 && m_iLeftClip <= 0 )
-            {
-                DryFire();
-            }
-        }
-        else
-        {
-            if ( m_iClip1 <= 0 )
-            {
-                DryFire();
-            }
-        }
-    }	
 }
 
 //-----------------------------------------------------------------------------
@@ -541,37 +521,25 @@ bool CWeaponPistol::Reload( void )
     if ( !pPlayer )
         return false;
 
-    // In dual mode, don't automatically reload if the other pistol has ammo.
-    if ( m_bDualMode && ( m_iClip1 == 0 ) && ( m_iLeftClip > 0 ) )
-    {
-        return false;
-    }
-
     bool fRet = false;
 
-    // Reload the right pistol normally
-    if (!m_bDualMode || (m_iClip1 == 0 && m_iLeftClip == 0))
+    // Reload right pistol
+    if ( m_iClip1 < GetMaxClip1() )
     {
-        if (m_iClip1 < GetMaxClip1())
-        {
-            fRet = DefaultReload(GetMaxClip1(), GetMaxClip2(), ACT_VM_RELOAD);
-        }
-    } 
+        fRet = DefaultReload( GetMaxClip1(), GetMaxClip2(), ACT_VM_RELOAD );
+    }
 
-    // Reload left  pistol only in akimbo mode
+    // In dual mode, also reload left pistol from reserve ammo
     if ( m_bDualMode )
     {
         int reserve = pPlayer->GetAmmoCount( m_iPrimaryAmmoType );
-
         int need = GetMaxClip1() - m_iLeftClip;
-
         int give = MIN( need, reserve );
 
         if ( give > 0 )
         {
             m_iLeftClip += give;
             pPlayer->RemoveAmmo( give, m_iPrimaryAmmoType );
-
             fRet = true;
         }
     }
