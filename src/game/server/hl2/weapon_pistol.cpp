@@ -1,6 +1,17 @@
 //========= Copyright Valve Corporation, All rights reserved. ============//
 //
-// Purpose:		Pistol - hand gun
+// Purpose: Pistol - hand gun with two fire modes. 
+//          Primary fire: Standard HL2 pistol
+//          Secondary fire: Akimbo
+//
+// Quell:   FIXME #1: There is a bug when player has 0 ammo in right pistol's clip
+//                    it can't shoot more than one bullet from left pistol.
+//
+//          FIXME #2: There is a bug that player reloads only left pistol
+//                    when in secondary fire mode and if right pistol has ammo
+//
+//          FIXME #3: There is a bug that player can't reload at all in
+//                    secondary fire mode when right pistol's clip is empty.
 //
 // $NoKeywords: $
 //=============================================================================//
@@ -109,8 +120,8 @@ public:
 	{
 		// Doubled fire rate when in rapid mode (0.25s vs 0.50s delay between shots for NPCs)
 		if ( m_bDualMode )
-			return 0.30f;
-		return 0.60f; 
+			return 0.20f;
+		return 0.40f; 
 	}
 
 	DECLARE_ACTTABLE();
@@ -123,6 +134,8 @@ private:
 
     bool    m_bDualMode;
     bool    m_bFlip;
+
+    int     m_iLeftClip;
 };
 
 
@@ -138,6 +151,7 @@ BEGIN_DATADESC( CWeaponPistol )
 	DEFINE_FIELD( m_flLastAttackTime,		FIELD_TIME ),
 	DEFINE_FIELD( m_flAccuracyPenalty,		FIELD_FLOAT ), //NOTENOTE: This is NOT tracking game time
 	DEFINE_FIELD( m_nNumShotsFired,			FIELD_INTEGER ),
+    DEFINE_FIELD( m_iLeftClip,              FIELD_INTEGER ),
 
 END_DATADESC()
 
@@ -179,6 +193,8 @@ CWeaponPistol::CWeaponPistol( void )
 
     m_bDualMode         = false;
     m_bFlip             = false;
+
+    m_iLeftClip         = 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -269,15 +285,36 @@ void CWeaponPistol::PrimaryAttack( void )
     }
     else
     {
+        bool rightHasAmmo = (m_iClip1 > 0);
+        bool leftHasAmmo  = (m_iLeftClip > 0);
+
+        if (!rightHasAmmo && !leftHasAmmo)
+        {
+            Reload();
+            return;
+        }
+
         if (!m_bFlip)
         {
-            BaseClass::PrimaryAttack();
-            m_bFlip = true;
+            // Right pistol's turn
+            if (rightHasAmmo)
+            {
+                BaseClass::PrimaryAttack();
+                m_bFlip = true;
+            }
+            else
+                LeftGunAttack();
         }
         else
         {
-            LeftGunAttack();
-            m_bFlip = false;
+            // Left pistol's turn
+            if (leftHasAmmo)
+            {
+                LeftGunAttack();
+                m_bFlip = false;
+            }
+            else
+                BaseClass::PrimaryAttack();
         }
     }
 
@@ -290,7 +327,19 @@ void CWeaponPistol::PrimaryAttack( void )
 
 void CWeaponPistol::SecondaryAttack()
 {
+    bool bWasDual = m_bDualMode;
     m_bDualMode = !m_bDualMode;
+
+    if (!bWasDual && m_bDualMode)
+    {
+        if (m_iLeftClip == 0)
+        {
+            int ammo = ToBasePlayer(GetOwner())->GetAmmoCount(m_iPrimaryAmmoType);
+            int amount = MIN(GetMaxClip1(), ammo);
+            m_iLeftClip = amount;
+            ToBasePlayer(GetOwner())->RemoveAmmo(amount, m_iPrimaryAmmoType);
+        }
+    }
 
     WeaponSound( SPECIAL1 );
 
@@ -304,7 +353,6 @@ void CWeaponPistol::LeftGunAttack()
 	// If my clip is empty (and I use clips) start reload
 	if ( UsesClipsForAmmo1() && !m_iClip1 )
 	{
-		Reload();
 		return;
 	}
 
@@ -347,8 +395,8 @@ void CWeaponPistol::LeftGunAttack()
 	// Make sure we don't fire more than the amount in the clip
 	if ( UsesClipsForAmmo1() )
 	{
-		info.m_iShots = min( info.m_iShots, m_iClip1 );
-		m_iClip1 -= info.m_iShots;
+        info.m_iShots = min(info.m_iShots, m_iLeftClip);
+        m_iLeftClip -= info.m_iShots;
 	}
 	else
 	{
@@ -370,7 +418,7 @@ void CWeaponPistol::LeftGunAttack()
 
 	pPlayer->FireBullets( info );
 
-	if (!m_iClip1 && pPlayer->GetAmmoCount(m_iPrimaryAmmoType) <= 0)
+    if (!m_iLeftClip && pPlayer->GetAmmoCount(m_iPrimaryAmmoType) <= 0)
 	{
 		// HEV suit - indicate out of ammo condition
 		pPlayer->SetSuitUpdate("!HEV_AMO0", FALSE, 0);
@@ -447,10 +495,23 @@ void CWeaponPistol::ItemPostFrame( void )
 	{
 		m_flNextPrimaryAttack = gpGlobals->curtime - 0.1f;
 	}
-	else if ( ( pOwner->m_nButtons & IN_ATTACK ) && ( m_flNextPrimaryAttack < gpGlobals->curtime ) && ( m_iClip1 <= 0 ) )
-	{
-		DryFire();
-	}
+    else if ( ( pOwner->m_nButtons & IN_ATTACK ) && ( m_flNextPrimaryAttack < gpGlobals->curtime ) )
+    {
+        if ( m_bDualMode )
+        {
+            if ( m_iClip1 <= 0 && m_iLeftClip <= 0 )
+            {
+                DryFire();
+            }
+        }
+        else
+        {
+            if ( m_iClip1 <= 0 )
+            {
+                DryFire();
+            }
+        }
+    }	
 }
 
 //-----------------------------------------------------------------------------
@@ -475,13 +536,53 @@ Activity CWeaponPistol::GetPrimaryAttackActivity( void )
 //-----------------------------------------------------------------------------
 bool CWeaponPistol::Reload( void )
 {
-	bool fRet = DefaultReload( GetMaxClip1(), GetMaxClip2(), ACT_VM_RELOAD );
-	if ( fRet )
-	{
-		WeaponSound( RELOAD );
-		m_flAccuracyPenalty = 0.0f;
-	}
-	return fRet;
+    CBasePlayer *pPlayer = ToBasePlayer( GetOwner() );
+
+    if ( !pPlayer )
+        return false;
+
+    // In dual mode, don't automatically reload if the other pistol has ammo.
+    if ( m_bDualMode && ( m_iClip1 == 0 ) && ( m_iLeftClip > 0 ) )
+    {
+        return false;
+    }
+
+    bool fRet = false;
+
+    // Reload the right pistol normally
+    if (!m_bDualMode || (m_iClip1 == 0 && m_iLeftClip == 0))
+    {
+        if (m_iClip1 < GetMaxClip1())
+        {
+            fRet = DefaultReload(GetMaxClip1(), GetMaxClip2(), ACT_VM_RELOAD);
+        }
+    } 
+
+    // Reload left  pistol only in akimbo mode
+    if ( m_bDualMode )
+    {
+        int reserve = pPlayer->GetAmmoCount( m_iPrimaryAmmoType );
+
+        int need = GetMaxClip1() - m_iLeftClip;
+
+        int give = MIN( need, reserve );
+
+        if ( give > 0 )
+        {
+            m_iLeftClip += give;
+            pPlayer->RemoveAmmo( give, m_iPrimaryAmmoType );
+
+            fRet = true;
+        }
+    }
+
+    if ( fRet )
+    {
+        WeaponSound( RELOAD );
+        m_flAccuracyPenalty = 0.0f;
+    }
+
+    return fRet;
 }
 
 //-----------------------------------------------------------------------------
