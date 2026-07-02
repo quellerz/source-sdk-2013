@@ -4,11 +4,12 @@
 //          Primary fire: Standard HL2 pistol
 //          Secondary fire: Akimbo
 //
-// Quell:   FIXME #1: There is a bug when player has 0 ammo in right pistol's clip
-//                    it can't shoot more than one bullet from left pistol.
+// Quell:   FIXME #1: There is a bug when player starts reloading mid-fire 
+//                    if right pistol's clip is empty if player clicks 
+//                    rapidly to shoot instead of pressing LMB.
 //
-//          FIXME #2: There is a bug that player can't reload at all in
-//                    secondary fire mode when right pistol's clip is empty.
+//          FIXME #2: There is a bug that that reload sound can be played 
+//                    even when both clips are full and reload isn't happening.
 //
 // $NoKeywords: $
 //=============================================================================//
@@ -69,6 +70,8 @@ public:
 	Activity	GetPrimaryAttackActivity( void );
 
 	virtual bool Reload( void );
+
+    virtual void HandleFireOnEmpty( void );
 
     virtual const Vector& GetBulletSpread( void )
 	{		
@@ -487,11 +490,12 @@ void CWeaponPistol::ItemPostFrame( void )
         }
     }
 
-	//Allow a refire as fast as the player can click
-	if ( ( ( pOwner->m_nButtons & IN_ATTACK ) == false ) && ( m_flSoonestPrimaryAttack < gpGlobals->curtime ) )
-	{
-		m_flNextPrimaryAttack = gpGlobals->curtime - 0.1f;
-	}
+    if ( !m_bDualMode )
+    {
+	    //Allow a refire as fast as the player can click
+	    if ( ( ( pOwner->m_nButtons & IN_ATTACK ) == false ) && ( m_flSoonestPrimaryAttack < gpGlobals->curtime ) )
+		    m_flNextPrimaryAttack = gpGlobals->curtime - 0.1f;
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -523,6 +527,15 @@ bool CWeaponPistol::Reload( void )
 
     bool fRet = false;
 
+    // Merge the left pistol's ammo back into reserve first, 
+    // so the reload math (and DefaultReload's internal ammo check) sees 
+    // the true total instead of thinking we're out of spare ammo.
+    if ( m_bDualMode && m_iLeftClip > 0 )
+    {
+        pPlayer->GiveAmmo( m_iLeftClip, m_iPrimaryAmmoType, true );
+        m_iLeftClip = 0;
+    }
+
     // Reload right pistol
     if ( m_iClip1 < GetMaxClip1() )
     {
@@ -551,6 +564,21 @@ bool CWeaponPistol::Reload( void )
     }
 
     return fRet;
+}
+
+void CWeaponPistol::HandleFireOnEmpty( void )
+{
+    // The base class only ever checks m_iClip1 (the right pistol).
+    // If we're dual-wielding and the left pistol still has ammo,
+    // keep going through our own PrimaryAttack() logic instead of
+    // treating the weapon as empty.
+    if ( m_bDualMode && m_iLeftClip > 0 )
+    {
+        PrimaryAttack();
+        return;
+    }
+
+    BaseClass::HandleFireOnEmpty();
 }
 
 //-----------------------------------------------------------------------------
